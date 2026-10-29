@@ -256,6 +256,8 @@ ${p(picks)}
     proxies:
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+${p(picks)}
       - 🎯 全球直连
 
   - name: 🤖 AI服务
@@ -284,8 +286,10 @@ ${p(picks)}
     type: select
     proxies:
       - 🚀 节点选择
-      - 🎯 全球直连
       - ♻️ 自动选择
+      - 🔄 故障转移
+${p(picks)}
+      - 🎯 全球直连
 
   - name: 🎯 全球直连
     type: select

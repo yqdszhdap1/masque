@@ -314,6 +314,8 @@ proxy-groups:
     proxies:
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+      - ☑️ 手动切换
       - 🎯 全球直连
 
   - name: 🤖 AI服务
@@ -343,8 +345,10 @@ proxy-groups:
     type: select
     proxies:
       - 🚀 节点选择
-      - 🎯 全球直连
       - ♻️ 自动选择
+      - 🔄 故障转移
+      - ☑️ 手动切换
+      - 🎯 全球直连
 
   - name: 🎯 全球直连
     type: select

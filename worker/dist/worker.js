@@ -675,6 +675,8 @@ ${p(picks)}
     proxies:
       - \u{1F680} \u8282\u70B9\u9009\u62E9
       - \u267B\uFE0F \u81EA\u52A8\u9009\u62E9
+      - \u{1F504} \u6545\u969C\u8F6C\u79FB
+${p(picks)}
       - \u{1F3AF} \u5168\u7403\u76F4\u8FDE
 
   - name: \u{1F916} AI\u670D\u52A1
@@ -703,8 +705,10 @@ ${p(picks)}
     type: select
     proxies:
       - \u{1F680} \u8282\u70B9\u9009\u62E9
-      - \u{1F3AF} \u5168\u7403\u76F4\u8FDE
       - \u267B\uFE0F \u81EA\u52A8\u9009\u62E9
+      - \u{1F504} \u6545\u969C\u8F6C\u79FB
+${p(picks)}
+      - \u{1F3AF} \u5168\u7403\u76F4\u8FDE
 
   - name: \u{1F3AF} \u5168\u7403\u76F4\u8FDE
     type: select

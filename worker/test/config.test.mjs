@@ -164,6 +164,15 @@ t(`无悬空引用${dangling.length ? " (" + dangling.slice(0, 3) + ")" : ""}`, 
   const ai = y.split("  - name: 🤖 AI服务")[1].split("\n  - name:")[0];
   t("AI服务 能选地区线路", ai.includes("亚洲线路"));
   t("AI服务 能选 WARP直连", ai.includes("WARP直连"));
+
+  // 电报与 FCM 同样要能选到所有落地
+  const tg = y.split("  - name: 📲 电报信息")[1].split("\n  - name:")[0];
+  t("电报信息 能选地区线路", tg.includes("亚洲线路"));
+  t("电报信息 能选 WARP直连", tg.includes("WARP直连"));
+
+  const fcm = y.split("  - name: 📢 谷歌FCM")[1].split("\n  - name:")[0];
+  t("谷歌FCM 能选地区线路", fcm.includes("亚洲线路"));
+  t("谷歌FCM 能选 WARP直连", fcm.includes("WARP直连"));
 }
 
 console.log(`\n通过 ${pass} 失败 ${fail}`);

@@ -7,6 +7,7 @@ Worker 不碰 Proton 登录（那会触发风控），只消费这段文本。
 用法: PROTON_USER=x PROTON_PASS=y python3 gen_proton.py <输出目录>
 """
 import asyncio, base64, hashlib, json, os, sys, time
+import urllib.error, urllib.request
 from proton.session import Session
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
@@ -16,6 +17,36 @@ WANT = {"JP": "日本", "SG": "新加坡", "US": "美国", "NL": "荷兰",
         "CH": "瑞士", "CA": "加拿大", "PL": "波兰", "RO": "罗马尼亚",
         "NO": "挪威", "MX": "墨西哥"}
 PER_COUNTRY = 3     # 每国取几台
+
+# Proton 会对客户端版本卡下限：太旧的版本连 /auth/info 都直接 422/5003 拒掉，
+# 表现为登录失败但日志里看不出是版本问题。这里按官方 Linux 客户端版本往上列候选，
+# 取服务端接受的第一个。第一项对齐官方当前版本，后面几项留给官方再抬门槛时兜底。
+API_BASE = "https://vpn-api.proton.me"
+APP_NAME = "linux-vpn"
+APP_VERSIONS = ("4.18.6", "5.0.0", "5.2.1", "5.4.0")
+
+
+def pick_app_version() -> str:
+    """用无凭证的 /auth/info 探出服务端还能接受的客户端版本。"""
+    for ver in APP_VERSIONS:
+        req = urllib.request.Request(
+            API_BASE + "/auth/info",
+            data=json.dumps({"Username": "version-probe@proton.me"}).encode(),
+            headers={"content-type": "application/json",
+                     "x-pm-appversion": f"{APP_NAME}@{ver}"})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                if resp.status == 200:
+                    print(f"客户端版本 {APP_NAME}@{ver} 可用")
+                    return ver
+        except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")
+            # 5003 = 版本不被支持，换下一个候选；其它错误照常抛（网络问题不该算版本问题）
+            if e.code == 422 and "5003" in body:
+                print(f"版本 {APP_NAME}@{ver} 已被 Proton 弃用")
+                continue
+            raise
+    sys.exit("候选版本全被 Proton 拒了，去 scripts/gen_proton.py 的 APP_VERSIONS 补新版本")
 
 
 def ed25519_to_wg(raw_sk: bytes) -> str:
@@ -29,8 +60,9 @@ def ed25519_to_wg(raw_sk: bytes) -> str:
 
 async def main():
     outdir = sys.argv[1] if len(sys.argv) > 1 else "dist"
-    s = Session(appversion="linux-vpn@4.8.2",
-                user_agent="ProtonVPN/4.8.2 (Linux; Ubuntu/24.04)")
+    ver = pick_app_version()
+    s = Session(appversion=f"{APP_NAME}@{ver}",
+                user_agent=f"ProtonVPN/{ver} (Linux; Ubuntu/24.04)")
 
     if not await s.async_authenticate(os.environ["PROTON_USER"],
                                       os.environ["PROTON_PASS"]):

@@ -1,0 +1,9 @@
+name = "masque"
+pages_build_output_dir = "."
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 绑定 KV 命名空间（请在 Cloudflare Pages 控制台设置中同样绑定名为 KV 的命名空间）
+[[kv_namespaces]]
+binding = "KV"
+id = "KV"

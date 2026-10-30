@@ -28,7 +28,6 @@ const RULESETS = [
   ["🍎 苹果服务", RS + "/ACL4SSR/ACL4SSR/master/Clash/Apple.list"],
   ["📲 电报信息", RS + "/ACL4SSR/ACL4SSR/master/Clash/Telegram.list"],
   ["🤖 AI服务", RS + "/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list"],
-  ["🤖 AI服务", RS + "/juewuy/ShellClash/master/rules/ai.list"],
   ["🤖 AI服务", RS + "/cmliu/ACL4SSR/main/Clash/Copilot.list"],
   ["🤖 AI服务", RS + "/cmliu/ACL4SSR/main/Clash/GithubCopilot.list"],
   ["🤖 AI服务", RS + "/cmliu/ACL4SSR/main/Clash/Claude.list"],
@@ -218,10 +217,7 @@ dns:
   nameserver-policy:
     'geosite:cn,private':
       - https://223.5.5.5/dns-query
-      - https://1.12.12.12/dns-query
-    'geosite:geolocation-!cn':
-      - https://1.1.1.1/dns-query
-      - https://8.8.8.8/dns-query`;
+      - https://1.12.12.12/dns-query`;
 }
 
 /** 下游分组（油管/奈飞/OpenAI 那些），两种配置共用。
@@ -274,6 +270,8 @@ ${p(picks)}
       - 🎯 全球直连
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+${p(picks)}
 
   - name: 🍎 苹果服务
     type: select
@@ -281,6 +279,8 @@ ${p(picks)}
       - 🎯 全球直连
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+${p(picks)}
 
   - name: 📢 谷歌FCM
     type: select
@@ -383,7 +383,7 @@ export function buildConfig(warp, opera, proton, wind) {
   const windLocDefs = Object.entries(windByLoc).map(([loc, names]) =>
     `  - name: WS-${loc}
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 100
     lazy: true
@@ -398,11 +398,7 @@ ${q(names)}`).join("\n\n");
   const protonCCNames = Object.keys(protonByCC).map((c) => `Proton-${c}`);
   const protonCCDefs = Object.entries(protonByCC).map(([cc, names]) =>
     `  - name: Proton-${cc}
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 100
-    lazy: true
+    type: select
     proxies:
 ${q(names)}`).join("\n\n");
 
@@ -411,8 +407,8 @@ ${q(names)}`).join("\n\n");
   if (windNames.length) picks.push("Windscribe线路", ...windLocNames);
   const locDefs = Object.entries(byLoc).map(([loc, tags]) => `  - name: ${loc}线路
     type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
+    url: https://www.gstatic.com/generate_204
+    interval: ${loc === "美洲" ? 300 : 3600}
     tolerance: 80
     lazy: true
     proxies:
@@ -452,8 +448,8 @@ ${p(picks)}
 
   - name: ♻️ 自动选择
     type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
+    url: https://www.gstatic.com/generate_204
+    interval: 3600
     tolerance: 50
     lazy: true
     proxies:
@@ -461,7 +457,7 @@ ${p(picks)}
 
   - name: 🔄 故障转移
     type: fallback
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 180
     lazy: true
     proxies:
@@ -471,7 +467,7 @@ ${locDefs}
 
   - name: WARP直连
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: http://cp.cloudflare.com/generate_204
     interval: 300
     tolerance: 50
     lazy: true
@@ -485,11 +481,7 @@ ${protonNames.length ? `
 ${p(protonCCNames)}
 
   - name: Proton-自动
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 80
-    lazy: true
+    type: select
     proxies:
 ${q(protonNames)}
 
@@ -503,7 +495,7 @@ ${p(windLocNames)}
 
   - name: WS-自动
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 80
     lazy: true

@@ -42,7 +42,6 @@ RULESETS = [
     ("🍎 苹果服务", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/Apple.list"),
     ("📲 电报信息", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/Telegram.list"),
     ("🤖 AI服务", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list"),
-    ("🤖 AI服务", f"{RS}/juewuy/ShellClash/master/rules/ai.list"),
     ("🤖 AI服务", f"{RS}/cmliu/ACL4SSR/main/Clash/Copilot.list"),
     ("🤖 AI服务", f"{RS}/cmliu/ACL4SSR/main/Clash/GithubCopilot.list"),
     ("🤖 AI服务", f"{RS}/cmliu/ACL4SSR/main/Clash/Claude.list"),
@@ -246,9 +245,6 @@ dns:
     'geosite:cn,private':
       - https://223.5.5.5/dns-query
       - https://1.12.12.12/dns-query
-    'geosite:geolocation-!cn':
-      - https://1.1.1.1/dns-query
-      - https://8.8.8.8/dns-query
 
 proxies:
 {chr(10).join(proxies)}
@@ -269,7 +265,7 @@ proxy-groups:
 
   - name: ♻️ 自动选择
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
     lazy: false
@@ -278,7 +274,7 @@ proxy-groups:
 
   - name: 🔄 故障转移
     type: fallback
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 180
     proxies:
 {ind(names)}
@@ -333,6 +329,8 @@ proxy-groups:
       - 🎯 全球直连
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+      - ☑️ 手动切换
 
   - name: 🍎 苹果服务
     type: select
@@ -340,6 +338,8 @@ proxy-groups:
       - 🎯 全球直连
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+      - ☑️ 手动切换
 
   - name: 📢 谷歌FCM
     type: select

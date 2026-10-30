@@ -48,7 +48,6 @@ RULESETS = [
     ("🍎 苹果服务", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/Apple.list"),
     ("📲 电报信息", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/Telegram.list"),
     ("🤖 AI服务", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list"),
-    ("🤖 AI服务", f"{RS}/juewuy/ShellClash/master/rules/ai.list"),
     ("🤖 AI服务", f"{RS}/cmliu/ACL4SSR/main/Clash/Copilot.list"),
     ("🤖 AI服务", f"{RS}/cmliu/ACL4SSR/main/Clash/GithubCopilot.list"),
     ("🤖 AI服务", f"{RS}/cmliu/ACL4SSR/main/Clash/Claude.list"),
@@ -194,7 +193,7 @@ def build(cfg, landings):
     loc_names = [f"{loc}线路" for loc in by_loc]
     loc_defs = "\n\n".join(f"""  - name: {loc}线路
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 80
     lazy: true
@@ -279,9 +278,6 @@ dns:
     'geosite:cn,private':
       - https://223.5.5.5/dns-query
       - https://1.12.12.12/dns-query
-    'geosite:geolocation-!cn':
-      - https://1.1.1.1/dns-query
-      - https://8.8.8.8/dns-query
 
 proxies:
 {chr(10).join(proxies)}
@@ -296,7 +292,7 @@ proxy-groups:
 
   - name: ♻️ 自动选择
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
     lazy: true
@@ -305,7 +301,7 @@ proxy-groups:
 
   - name: 🔄 故障转移
     type: fallback
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 180
     lazy: true
     proxies:
@@ -360,6 +356,8 @@ proxy-groups:
       - 🎯 全球直连
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+{plain(loc_names)}
 
   - name: 🍎 苹果服务
     type: select
@@ -367,6 +365,8 @@ proxy-groups:
       - 🎯 全球直连
       - 🚀 节点选择
       - ♻️ 自动选择
+      - 🔄 故障转移
+{plain(loc_names)}
 
   - name: 📢 谷歌FCM
     type: select

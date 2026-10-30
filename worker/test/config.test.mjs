@@ -173,6 +173,14 @@ t(`无悬空引用${dangling.length ? " (" + dangling.slice(0, 3) + ")" : ""}`, 
   const fcm = y.split("  - name: 📢 谷歌FCM")[1].split("\n  - name:")[0];
   t("谷歌FCM 能选地区线路", fcm.includes("亚洲线路"));
   t("谷歌FCM 能选 WARP直连", fcm.includes("WARP直连"));
+
+  const ms = y.split("  - name: Ⓜ️ 微软服务")[1].split("\n  - name:")[0];
+  t("微软服务 能选地区线路", ms.includes("亚洲线路"));
+  t("微软服务 能选 WARP直连", ms.includes("WARP直连"));
+
+  const apple = y.split("  - name: 🍎 苹果服务")[1].split("\n  - name:")[0];
+  t("苹果服务 能选地区线路", apple.includes("亚洲线路"));
+  t("苹果服务 能选 WARP直连", apple.includes("WARP直连"));
 }
 
 console.log(`\n通过 ${pass} 失败 ${fail}`);

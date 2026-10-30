@@ -392,7 +392,6 @@ var RULESETS = [
   ["\u{1F34E} \u82F9\u679C\u670D\u52A1", RS + "/ACL4SSR/ACL4SSR/master/Clash/Apple.list"],
   ["\u{1F4F2} \u7535\u62A5\u4FE1\u606F", RS + "/ACL4SSR/ACL4SSR/master/Clash/Telegram.list"],
   ["\u{1F916} AI\u670D\u52A1", RS + "/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list"],
-  ["\u{1F916} AI\u670D\u52A1", RS + "/juewuy/ShellClash/master/rules/ai.list"],
   ["\u{1F916} AI\u670D\u52A1", RS + "/cmliu/ACL4SSR/main/Clash/Copilot.list"],
   ["\u{1F916} AI\u670D\u52A1", RS + "/cmliu/ACL4SSR/main/Clash/GithubCopilot.list"],
   ["\u{1F916} AI\u670D\u52A1", RS + "/cmliu/ACL4SSR/main/Clash/Claude.list"],
@@ -640,10 +639,7 @@ dns:
   nameserver-policy:
     'geosite:cn,private':
       - https://223.5.5.5/dns-query
-      - https://1.12.12.12/dns-query
-    'geosite:geolocation-!cn':
-      - https://1.1.1.1/dns-query
-      - https://8.8.8.8/dns-query`;
+      - https://1.12.12.12/dns-query`;
 }
 function tailGroups(picks) {
   return `  - name: \u{1F4F9} \u6CB9\u7BA1\u89C6\u9891
@@ -693,6 +689,8 @@ ${p(picks)}
       - \u{1F3AF} \u5168\u7403\u76F4\u8FDE
       - \u{1F680} \u8282\u70B9\u9009\u62E9
       - \u267B\uFE0F \u81EA\u52A8\u9009\u62E9
+      - \u{1F504} \u6545\u969C\u8F6C\u79FB
+${p(picks)}
 
   - name: \u{1F34E} \u82F9\u679C\u670D\u52A1
     type: select
@@ -700,6 +698,8 @@ ${p(picks)}
       - \u{1F3AF} \u5168\u7403\u76F4\u8FDE
       - \u{1F680} \u8282\u70B9\u9009\u62E9
       - \u267B\uFE0F \u81EA\u52A8\u9009\u62E9
+      - \u{1F504} \u6545\u969C\u8F6C\u79FB
+${p(picks)}
 
   - name: \u{1F4E2} \u8C37\u6B4CFCM
     type: select
@@ -785,7 +785,7 @@ function buildConfig(warp, opera, proton, wind) {
   const windLocNames = Object.keys(windByLoc).map((l) => `WS-${l}`);
   const windLocDefs = Object.entries(windByLoc).map(([loc, names]) => `  - name: WS-${loc}
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 100
     lazy: true
@@ -794,11 +794,7 @@ ${q(names)}`).join("\n\n");
   const locNames = Object.keys(byLoc).map((l) => `${l}\u7EBF\u8DEF`);
   const protonCCNames = Object.keys(protonByCC).map((c) => `Proton-${c}`);
   const protonCCDefs = Object.entries(protonByCC).map(([cc, names]) => `  - name: Proton-${cc}
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 100
-    lazy: true
+    type: select
     proxies:
 ${q(names)}`).join("\n\n");
   const picks = [...locNames, "WARP\u76F4\u8FDE"];
@@ -806,8 +802,8 @@ ${q(names)}`).join("\n\n");
   if (windNames.length) picks.push("Windscribe\u7EBF\u8DEF", ...windLocNames);
   const locDefs = Object.entries(byLoc).map(([loc, tags]) => `  - name: ${loc}\u7EBF\u8DEF
     type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
+    url: https://www.gstatic.com/generate_204
+    interval: ${loc === "\u7F8E\u6D32" ? 300 : 3600}
     tolerance: 80
     lazy: true
     proxies:
@@ -845,8 +841,8 @@ ${p(picks)}
 
   - name: \u267B\uFE0F \u81EA\u52A8\u9009\u62E9
     type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
+    url: https://www.gstatic.com/generate_204
+    interval: 3600
     tolerance: 50
     lazy: true
     proxies:
@@ -854,7 +850,7 @@ ${p(picks)}
 
   - name: \u{1F504} \u6545\u969C\u8F6C\u79FB
     type: fallback
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 180
     lazy: true
     proxies:
@@ -864,7 +860,7 @@ ${locDefs}
 
   - name: WARP\u76F4\u8FDE
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: http://cp.cloudflare.com/generate_204
     interval: 300
     tolerance: 50
     lazy: true
@@ -878,11 +874,7 @@ ${protonNames.length ? `
 ${p(protonCCNames)}
 
   - name: Proton-\u81EA\u52A8
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 80
-    lazy: true
+    type: select
     proxies:
 ${q(protonNames)}
 
@@ -896,7 +888,7 @@ ${p(windLocNames)}
 
   - name: WS-\u81EA\u52A8
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 80
     lazy: true

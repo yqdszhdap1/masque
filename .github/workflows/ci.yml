@@ -1,0 +1,47 @@
+name: 自动化测试与代码检查
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 运行 Worker 单元测试
+        run: |
+          cd worker
+          npm install
+          npm test
+
+      - name: 验证 Worker 构建
+        run: |
+          cd worker
+          npm run build
+          test -s dist/worker.js
+
+      - name: 验证 Python 脚本语法
+        run: |
+          python3 -m py_compile scripts/common.py
+          python3 -m py_compile scripts/gen_masque.py
+          python3 -m py_compile scripts/gen_opera_masque.py
+          python3 -m py_compile scripts/gen_wind.py

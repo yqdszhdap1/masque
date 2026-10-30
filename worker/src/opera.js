@@ -4,6 +4,7 @@
 //       按服务端声明的算法走，同时保留 MD5 兜底。
 // 坑三: Workers 的 fetch 不自动管 cookie，会话得手工维持。
 import { md5Hex } from "./md5.js";
+import { randHex, fetchWithTimeout } from "./utils.js";
 
 const EP = "https://api2.sec-tunnel.com/v4";
 const API_USER = "se0316";
@@ -34,12 +35,6 @@ async function sha1Upper(s) {
     .map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
-function randHex(n) {
-  const a = new Uint8Array(n);
-  crypto.getRandomValues(a);
-  return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 class Session {
   constructor() { this.jar = ""; }
 
@@ -53,7 +48,7 @@ class Session {
     const body = new URLSearchParams(params).toString();
     const base = () => ({ ...H, ...(this.jar ? { Cookie: this.jar } : {}) });
 
-    let r = await fetch(url, { method: "POST", headers: base(), body });
+    let r = await fetchWithTimeout(url, { method: "POST", headers: base(), body });
     if (r.status === 401) {
       const wa = r.headers.get("www-authenticate") || "";
       const g = (k) => (wa.match(new RegExp(`${k}="([^"]*)"`)) || [])[1] || "";
@@ -74,7 +69,7 @@ class Session {
       if (q) a += `, qop=${q}, nc=${nc}, cnonce="${cnonce}"`;
       if (opaque) a += `, opaque="${opaque}"`;
       this._absorb(r);
-      r = await fetch(url, {
+      r = await fetchWithTimeout(url, {
         method: "POST",
         headers: { ...base(), Authorization: a },
         body,
@@ -109,16 +104,18 @@ export async function fetchOpera() {
   const gp = await s.rpc("device_generate_password", { device_id: deviceId });
   const password = gp.data.device_password;
 
+  // 并行发现多大区落地节点，大幅缩减延迟
+  const regions = Object.entries(REGIONS);
+  const results = await Promise.allSettled(
+    regions.map(([code]) => s.rpc("discover", { serial_no: idHash, requested_geo: code }))
+  );
+
   const landings = [];
-  for (const [code, loc] of Object.entries(REGIONS)) {
-    let disc;
-    try {
-      disc = await s.rpc("discover", { serial_no: idHash, requested_geo: code });
-    } catch {
-      continue;   // 某个区拿不到就跳过，不影响其他区
-    }
+  regions.forEach(([code, loc], idx) => {
+    const res = results[idx];
+    if (res.status !== "fulfilled" || !res.value?.data?.ips) return;
     let seq = 0;
-    for (const x of disc.data.ips || []) {
+    for (const x of res.value.data.ips) {
       seq += 1;
       landings.push({
         tag: `${loc}${seq}`,
@@ -128,7 +125,7 @@ export async function fetchOpera() {
         host: `${code.toLowerCase()}${seq - 1}.sec-tunnel.com`,
       });
     }
-  }
+  });
 
   return { username: idHash, password, landings, fetchedAt: new Date().toISOString() };
 }

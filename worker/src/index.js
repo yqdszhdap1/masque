@@ -37,10 +37,19 @@ const DEFAULT_SUB = "sub";
 const TTL_MS = 4 * 3600 * 1000;
 const SKEW_MS = 10 * 60 * 1000;
 
+const SEC_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "strict-origin-when-cross-origin",
+};
+
 const json = (o, s = 200) =>
   new Response(JSON.stringify(o), {
     status: s,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...SEC_HEADERS,
+    },
   });
 
 const html = (body, s = 200) =>
@@ -49,6 +58,7 @@ const html = (body, s = 200) =>
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
+      ...SEC_HEADERS,
     },
   });
 

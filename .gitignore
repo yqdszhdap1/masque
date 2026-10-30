@@ -7,6 +7,8 @@ mihomo.gz
 check/
 opera-proxy
 ruleset/
+__pycache__/
+*.py[cod]
 node_modules/
 .wrangler/
 worker/package-lock.json

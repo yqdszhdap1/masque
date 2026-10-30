@@ -1,12 +1,6 @@
 // Opera VPN over Cloudflare WARP (MASQUE) —— 单文件版\n// 由 src/ 打包而成，网页部署用。改代码请改 src/ 后重新 npm run build。\n// 仓库 https://github.com/byJoey/warp-masque-actions\n
 
-// src/warp.js
-var API = "https://api.cloudflareclient.com/v0a4471";
-var H = {
-  "User-Agent": "WARP for Android",
-  "CF-Client-Version": "a-6.35-4471",
-  "Content-Type": "application/json; charset=UTF-8"
-};
+// src/utils.js
 var b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 function randB64(n) {
   const a = new Uint8Array(n);
@@ -18,11 +12,32 @@ function randHex(n) {
   crypto.getRandomValues(a);
   return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+async function fetchWithTimeout(url, init = {}, timeoutMs = 25e3) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...init,
+      signal: init.signal || controller.signal
+    });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+// src/warp.js
+var API = "https://api.cloudflareclient.com/v0a4471";
+var H = {
+  "User-Agent": "WARP for Android",
+  "CF-Client-Version": "a-6.35-4471",
+  "Content-Type": "application/json; charset=UTF-8"
+};
 function cfTime() {
   return (/* @__PURE__ */ new Date()).toISOString().replace("Z", "+00:00");
 }
 async function registerWarp(deviceName = "cf-worker") {
-  const reg = await fetch(`${API}/reg`, {
+  const reg = await fetchWithTimeout(`${API}/reg`, {
     method: "POST",
     headers: H,
     body: JSON.stringify({
@@ -50,7 +65,7 @@ async function registerWarp(deviceName = "cf-worker") {
   const spki = b64(await crypto.subtle.exportKey("spki", kp.publicKey));
   const pkcs8 = b64(await crypto.subtle.exportKey("pkcs8", kp.privateKey));
   const sec1 = pkcs8ToSec1(pkcs8);
-  const patch = await fetch(`${API}/reg/${acc.id}`, {
+  const patch = await fetchWithTimeout(`${API}/reg/${acc.id}`, {
     method: "PATCH",
     headers: { ...H, Authorization: `Bearer ${acc.token}` },
     body: JSON.stringify({
@@ -281,11 +296,6 @@ async function sha1Upper(s) {
   const d = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(s));
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
-function randHex2(n) {
-  const a = new Uint8Array(n);
-  crypto.getRandomValues(a);
-  return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 var Session = class {
   constructor() {
     this.jar = "";
@@ -298,14 +308,14 @@ var Session = class {
     const url = `${EP}/${path}`;
     const body = new URLSearchParams(params).toString();
     const base = () => ({ ...H2, ...this.jar ? { Cookie: this.jar } : {} });
-    let r = await fetch(url, { method: "POST", headers: base(), body });
+    let r = await fetchWithTimeout(url, { method: "POST", headers: base(), body });
     if (r.status === 401) {
       const wa = r.headers.get("www-authenticate") || "";
       const g = (k) => (wa.match(new RegExp(`${k}="([^"]*)"`)) || [])[1] || "";
       const realm = g("realm"), nonce = g("nonce"), qop = g("qop"), opaque = g("opaque");
       const algo = g("algorithm") || (wa.match(/algorithm=([\w-]+)/) || [])[1] || "MD5";
       const uri = new URL(url).pathname;
-      const cnonce = randHex2(8), nc = "00000001";
+      const cnonce = randHex(8), nc = "00000001";
       const H1 = await digestHash(algo, `${API_USER}:${realm}:${API_PASS}`);
       const H22 = await digestHash(algo, `POST:${uri}`);
       const q2 = qop ? qop.split(",")[0].trim() : "";
@@ -314,7 +324,7 @@ var Session = class {
       if (q2) a += `, qop=${q2}, nc=${nc}, cnonce="${cnonce}"`;
       if (opaque) a += `, opaque="${opaque}"`;
       this._absorb(r);
-      r = await fetch(url, {
+      r = await fetchWithTimeout(url, {
         method: "POST",
         headers: { ...base(), Authorization: a },
         body
@@ -331,27 +341,27 @@ var Session = class {
 };
 async function fetchOpera() {
   const s = new Session();
-  const email = `${randHex2(10)}@${CLIENT_TYPE}.best.vpn`;
+  const email = `${randHex(10)}@${CLIENT_TYPE}.best.vpn`;
   await s.rpc("register_subscriber", { email, password: await sha1Upper(email) });
   const dev = await s.rpc("register_device", {
     client_type: CLIENT_TYPE,
-    device_hash: randHex2(20).toUpperCase(),
+    device_hash: randHex(20).toUpperCase(),
     device_name: "Opera-Browser-Client"
   });
   const deviceId = dev.data.device_id;
   const idHash = await sha1Upper(deviceId);
   const gp = await s.rpc("device_generate_password", { device_id: deviceId });
   const password = gp.data.device_password;
+  const regions = Object.entries(REGIONS);
+  const results = await Promise.allSettled(
+    regions.map(([code]) => s.rpc("discover", { serial_no: idHash, requested_geo: code }))
+  );
   const landings = [];
-  for (const [code, loc] of Object.entries(REGIONS)) {
-    let disc;
-    try {
-      disc = await s.rpc("discover", { serial_no: idHash, requested_geo: code });
-    } catch {
-      continue;
-    }
+  regions.forEach(([code, loc], idx) => {
+    const res = results[idx];
+    if (res.status !== "fulfilled" || !res.value?.data?.ips) return;
     let seq = 0;
-    for (const x of disc.data.ips || []) {
+    for (const x of res.value.data.ips) {
       seq += 1;
       landings.push({
         tag: `${loc}${seq}`,
@@ -361,7 +371,7 @@ async function fetchOpera() {
         host: `${code.toLowerCase()}${seq - 1}.sec-tunnel.com`
       });
     }
-  }
+  });
   return { username: idHash, password, landings, fetchedAt: (/* @__PURE__ */ new Date()).toISOString() };
 }
 
@@ -968,7 +978,7 @@ function authHash() {
   return { hash: md5Hex(CLIENT_AUTH_SECRET + String(t)), time: t };
 }
 async function call(url, init) {
-  const r = await fetch(url, { ...init, headers: { ...H3, ...init?.headers || {} } });
+  const r = await fetchWithTimeout(url, { ...init, headers: { ...H3, ...init?.headers || {} } });
   const text = await r.text();
   let j;
   try {
@@ -1009,7 +1019,7 @@ async function fetchSession(acc) {
   };
 }
 async function fetchServers(acc) {
-  const r = await fetch(`${ASSETS}/chrome/0/${acc.locHash}`, { headers: H3 });
+  const r = await fetchWithTimeout(`${ASSETS}/chrome/0/${acc.locHash}`, { headers: H3 });
   if (!r.ok) throw new Error(`serverlist HTTP ${r.status}`);
   const j = await r.json();
   const out = [];
@@ -1648,15 +1658,24 @@ var COOKIE = "om_session";
 var DEFAULT_SUB = "sub";
 var TTL_MS = 4 * 3600 * 1e3;
 var SKEW_MS = 10 * 60 * 1e3;
+var SEC_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "strict-origin-when-cross-origin"
+};
 var json = (o, s = 200) => new Response(JSON.stringify(o), {
   status: s,
-  headers: { "content-type": "application/json; charset=utf-8" }
+  headers: {
+    "content-type": "application/json; charset=utf-8",
+    ...SEC_HEADERS
+  }
 });
 var html = (body, s = 200) => new Response(body, {
   status: s,
   headers: {
     "content-type": "text/html; charset=utf-8",
-    "cache-control": "no-store"
+    "cache-control": "no-store",
+    ...SEC_HEADERS
   }
 });
 var notFound = () => new Response("Not Found", { status: 404 });

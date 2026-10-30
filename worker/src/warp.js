@@ -1,25 +1,13 @@
 // Cloudflare WARP 注册 + MASQUE 公钥 enroll。
 // 全程 fetch + WebCrypto，Workers 原生能跑。
+import { b64, randB64, randHex, fetchWithTimeout } from "./utils.js";
+
 const API = "https://api.cloudflareclient.com/v0a4471";
 const H = {
   "User-Agent": "WARP for Android",
   "CF-Client-Version": "a-6.35-4471",
   "Content-Type": "application/json; charset=UTF-8",
 };
-
-const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
-
-function randB64(n) {
-  const a = new Uint8Array(n);
-  crypto.getRandomValues(a);
-  return btoa(String.fromCharCode(...a));
-}
-
-function randHex(n) {
-  const a = new Uint8Array(n);
-  crypto.getRandomValues(a);
-  return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 // CF 要 "2006-01-02T15:04:05.000-07:00" 这个格式
 function cfTime() {
@@ -28,7 +16,7 @@ function cfTime() {
 
 /** 注册一台新 WARP 设备并把 MASQUE 公钥挂上去。 */
 export async function registerWarp(deviceName = "cf-worker") {
-  const reg = await fetch(`${API}/reg`, {
+  const reg = await fetchWithTimeout(`${API}/reg`, {
     method: "POST",
     headers: H,
     body: JSON.stringify({
@@ -57,7 +45,7 @@ export async function registerWarp(deviceName = "cf-worker") {
   // mihomo 要 SEC1，WebCrypto 只给 PKCS8，得转一道
   const sec1 = pkcs8ToSec1(pkcs8);
 
-  const patch = await fetch(`${API}/reg/${acc.id}`, {
+  const patch = await fetchWithTimeout(`${API}/reg/${acc.id}`, {
     method: "PATCH",
     headers: { ...H, Authorization: `Bearer ${acc.token}` },
     body: JSON.stringify({

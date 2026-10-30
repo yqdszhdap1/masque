@@ -15,6 +15,7 @@
 // 的 runner 上跑（scripts/gen_wind.py），Worker 这边只消费账号。
 
 import { md5Hex } from "./md5.js";
+import { fetchWithTimeout } from "./utils.js";
 
 const CLIENT_AUTH_SECRET = "952b4412f002315aa50751032fcaab03";
 const API = "https://api.windscribe.com";
@@ -57,7 +58,7 @@ function randPass() {
 }
 
 async function call(url, init) {
-  const r = await fetch(url, { ...init, headers: { ...H, ...(init?.headers || {}) } });
+  const r = await fetchWithTimeout(url, { ...init, headers: { ...H, ...(init?.headers || {}) } });
   const text = await r.text();
   let j;
   try { j = JSON.parse(text); } catch { throw new Error(`响应不是 JSON: ${text.slice(0, 120)}`); }
@@ -130,7 +131,7 @@ export async function fetchSession(acc) {
 
 /** 服务器列表。这个接口不要鉴权头，路径里带 loc_hash。 */
 export async function fetchServers(acc) {
-  const r = await fetch(`${ASSETS}/chrome/0/${acc.locHash}`, { headers: H });
+  const r = await fetchWithTimeout(`${ASSETS}/chrome/0/${acc.locHash}`, { headers: H });
   if (!r.ok) throw new Error(`serverlist HTTP ${r.status}`);
   const j = await r.json();
   const out = [];

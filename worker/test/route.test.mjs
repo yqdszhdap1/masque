@@ -2,6 +2,40 @@
 // 跑: node test/route.test.mjs
 import worker from "../src/index.js";
 
+// 拦截测试过程中的外网请求，避免等待真实的 WARP/Opera/Windscribe 接口超时
+const _origFetch = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (u.includes("api.cloudflareclient.com")) {
+    return new Response(JSON.stringify({
+      id: "fake-device", token: "fake-token",
+      config: {
+        interface: { addresses: { v4: "172.16.0.2", v6: "2606:4700:110::1" } },
+        peers: [{ public_key: "fake-pub" }]
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (u.includes("sec-tunnel.com")) {
+    return new Response(JSON.stringify({
+      status: { code: 0 },
+      data: {
+        device_id: "dev123", device_password: "pw",
+        ips: [{ ip: "1.2.3.4", port: [443] }]
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (u.includes("windscribe.com")) {
+    return new Response(JSON.stringify({
+      data: {
+        username: btoa("ws-user"), password: btoa("ws-pass"),
+        traffic_used: 100, traffic_max: 2147483648, status: 1
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (_origFetch) return _origFetch(url, init);
+  return new Response("{}", { status: 200 });
+};
+
 const PW = "test-password-123";
 let kv, env;
 

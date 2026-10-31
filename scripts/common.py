@@ -47,11 +47,34 @@ RULESETS = [
     ("🎯 全球直连", f"{RS}/ACL4SSR/ACL4SSR/master/Clash/ChinaCompanyIp.list"),
 ]
 
+AI_GEOSITE = ["google-gemini", "openai", "anthropic"]
+
 AI_DOMAINS = [
     "openai.fm", "operator.chatgpt.com", "chat.com", "anthropic.com",
     "claude.ai", "claudeusercontent.com", "gemini.google.com", "aistudio.google.com",
     "generativelanguage.googleapis.com", "notebooklm.google.com", "notebooklm.google", "labs.google",
     "deepmind.com", "x.ai", "grok.com", "meta.ai",
+    # Google AI 全量子域（GeoSite google-gemini 的显式镜像）。
+    # 不支持 GEOSITE 的客户端靠这批兜底；cloudcode-pa / antigravity 是
+    # Antigravity 渠道的上游，漏掉会被宽泛的 googleapis.com 规则抓走。
+    "ai.google.dev", "alkalicore-pa.clients6.google.com",
+    "alkalimakersuite-pa.clients6.google.com",
+    "webchannel-alkalimakersuite-pa.clients6.google.com",
+    "geminiweb-pa.clients.google.com", "geminiweb-pa.clients6.google.com",
+    "appsgenaiserver-pa.clients.google.com", "appsgenaiserver-pa.clients6.google.com",
+    "appsgenaiserver-pa.googleapis.com", "cloudaicompanion.googleapis.com",
+    "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+    "notebooklm-pa.googleapis.com", "notebooklm.googleapis.com",
+    "antigravity-pa.googleapis.com", "antigravity.googleapis.com",
+    "antigravity-unleash.goog", "antigravity.google", "notebook.google",
+    "deepmind.google", "opal.google", "flow.google", "generativeai.google",
+    "ai.studio", "jules.google", "gemini.google", "notebook.google.com",
+    "labs.google.com", "gemini.gstatic.com", "bard.google.com",
+    "jules.google.com", "makersuite.google.com", "stitch.withgoogle.com",
+    "robinfrontend-pa.googleapis.com", "flow.google.com",
+    "aisandbox-pa.googleapis.com", "aicode.googleapis.com", "aida.googleapis.com",
+    "proactivebackend-pa.googleapis.com", "opal.google.com", "geller-pa.googleapis.com",
+    "labstailwind.pa.googleapis.com",
     "perplexity.ai", "pplx.ai", "perplexity.com", "mistral.ai",
     "chat.mistral.ai", "cohere.com", "cohere.ai", "ai21.com",
     "together.ai", "together.xyz", "fireworks.ai", "groq.com",
@@ -97,6 +120,19 @@ def masque_node(name, ip, port, priv, pub, v4, v6, sni=None):
     remote-dns-resolve: true
     dns: [1.1.1.1, 2606:4700:4700::1111]"""
 
+def ai_rule_lines():
+    """AI 分流规则：GeoSite 分类在前（自动跟随上游新增域名），显式域名在后兜底。
+
+    GeoSite 需要内核支持（mihomo 全系自带）；不支持 GEOSITE 的客户端
+    只认显式域名，那批就是 google-gemini 分类的离线镜像，所以两条都要。
+    顺序上 GeoSite 先、显式域名后，且都排在 RULE-SET 之前，
+    免得被 ProxyLite 里宽泛的 DOMAIN-SUFFIX,googleapis.com 抢先命中。
+    """
+    geo = [f"  - GEOSITE,{c},🤖 AI服务" for c in AI_GEOSITE]
+    dom = [f"  - DOMAIN-SUFFIX,{d},🤖 AI服务" for d in AI_DOMAINS]
+    return geo + dom
+
+
 def build_prov_and_rules():
     prov_lines = []
     rule_lines = []
@@ -118,6 +154,5 @@ def build_prov_and_rules():
     interval: 86400""")
         rule_lines.append(f"  - RULE-SET,{pname},{group}")
 
-    ai_inlines = [f"  - DOMAIN-SUFFIX,{d},🤖 AI服务" for d in AI_DOMAINS]
-    all_rules = ai_inlines + rule_lines
+    all_rules = ai_rule_lines() + rule_lines
     return "\n".join(prov_lines), "\n".join(all_rules)

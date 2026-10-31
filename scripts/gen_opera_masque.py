@@ -17,7 +17,7 @@ import subprocess
 import sys
 from common import (
     V4, V6, PORTS, OFFICIAL_SNI, SNI_NODE,
-    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS
+    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS, ai_rule_lines
 )
 
 # Opera VPN 只有三个大区，没有国家级选项
@@ -95,10 +95,10 @@ def build(cfg, landings):
     def plain(items, n=6):
         return "\n".join(" " * n + f"- {x}" for x in items)
 
-    # 组合数太多，平铺在一个组里没法选，按地区收成 url-test
+    # 组合数太多，平铺在一个组里没法选，按地区收成 smart
     loc_names = [f"{loc}线路" for loc in by_loc]
     loc_defs = "\n\n".join(f"""  - name: {loc}线路
-    type: url-test
+    type: smart
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 80
@@ -118,8 +118,8 @@ def build(cfg, landings):
     path: ./ruleset/{pn}.list""")
         rules.append(f"  - RULE-SET,{pn},{group}")
 
-    # 内联的 AI 域名放在 RULE-SET 前面，别被上游更宽的条目抢先命中
-    rules = [f"  - DOMAIN-SUFFIX,{d},🤖 AI服务" for d in AI_DOMAINS] + rules
+    # 内联的 AI 规则放在 RULE-SET 前面，别被上游更宽的条目抢先命中
+    rules = ai_rule_lines() + rules
 
     yaml = f"""# Opera VPN over Cloudflare WARP (MASQUE)
 # 由 GitHub Actions 自动生成，请勿手工编辑

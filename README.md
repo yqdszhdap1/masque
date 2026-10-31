@@ -186,6 +186,51 @@ PORTS = (...)   # 端口
 
 分流规则用的是 ACL4SSR，改 `RULESETS` 那个列表。
 
+### AI 分流（GeoSite + 显式域名双轨）
+
+`scripts/common.py` 与 `worker/src/config.js` 各有一份 `AI_GEOSITE` / `AI_DOMAINS`，
+生成的 rules 段把 AI 规则整体排在所有 `RULE-SET` 之前：
+
+```yaml
+rules:
+  - GEOSITE,google-gemini,🤖 AI服务      # 分类，随 GeoSite.dat 自动跟进新域名
+  - GEOSITE,openai,🤖 AI服务
+  - GEOSITE,anthropic,🤖 AI服务
+  - DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,🤖 AI服务   # 显式镜像，兜底老客户端
+  ...
+```
+
+两条轨道各管一件事：
+
+| 轨道 | 作用 | 维护成本 |
+|---|---|---|
+| `GEOSITE` | 内核按 GeoSite 分类匹配，OpenClash 每周三 cron 刷新 GeoSite.dat，新域名自动进来 | 零 |
+| `DOMAIN-SUFFIX` | 不支持 GEOSITE 的客户端（部分老版 Clash / Shadowrocket）只认这个 | 手工，但已是 google-gemini 分类的离线镜像 |
+
+**为什么必须放在 `RULE-SET` 之前**：`rule22` 引的 ACL4SSR ProxyLite.list 里有
+`DOMAIN-SUFFIX,googleapis.com` 这条宽泛规则，任何没被前面显式命中的
+`*.googleapis.com` 都会落到 `🚀 节点选择`。Antigravity 渠道的上游
+`cloudcode-pa.googleapis.com` / `daily-cloudcode-pa.googleapis.com` 就吃过这个亏：
+落到 WARP 直连后出口被判 CN，Google 直接回
+`400 User location is not supported for the API use`。
+
+### 组类型约定（源头决定，不靠路由器转换）
+
+| 组 | 类型 | 理由 |
+|---|---|---|
+| `亚洲/欧洲/美洲线路` | `smart` | 直接写 smart，不等 OpenClash 的 `auto_smart_switch` 转换（转换条件只认 url-test/fallback/load-balance） |
+| `♻️ 自动选择` | `smart` | 同上 |
+| `WARP直连` | `url-test` | 单一 url-test 已足够，靠 `probePicks` 限成员 |
+| `WS-*` | `url-test` | 节点少（每地区 2~8 台），批量探测无害 |
+| `Proton*` | **全部 `select`** | 见下 |
+
+**Proton 全家族强制 `select`**：免费版对并发探测有服务端限流，一次批量健康检查
+就可能把凭据打到冷却。`select` 不在 `auto_smart_switch` 的转换列表里，也不参与
+任何周期探测 —— 只有用户手选那一台时才测，即「只允许被选用的节点测速」。
+
+同理，`probePicks`（喂给 `♻️ 自动选择` / `🔄 故障转移` 的成员表）**刻意不含
+Proton 全家族**，只放三个落地组 + `WARP直连`，避免逐轮把它们拉进批量探测。
+
 ---
 
 ## 套娃：Opera VPN 叠在 WARP 上

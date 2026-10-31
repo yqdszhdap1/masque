@@ -96,14 +96,40 @@ function buildEntries(warp) {
 // 注意别往里加 googleapis.com、cloudflare.com、stripe.com 这类共用域名 ——
 // 上游的 ai.list 就干了这事（它把整个 googleapis.com 和 bing.com 都算 AI），
 // 会把大量无关流量拽进 AI 分组。这里只放各家自己的域名。
+//
+// Google 那一段是 GeoSite google-gemini 分类的离线镜像：GeoSite 会随上游
+// 每周更新自动跟进新域名，显式域名只给不支持 GEOSITE 的客户端兜底。
+// cloudcode-pa / antigravity 这一批尤其不能漏 —— 它们是 Antigravity 渠道的
+// 上游，漏掉就会被 ProxyLite 里宽泛的 DOMAIN-SUFFIX,googleapis.com 抓走，
+// 落到 CN 出口后 Google 直接回 400 User location is not supported。
+const AI_GEOSITE = ["google-gemini", "openai", "anthropic"];
+
 const AI_DOMAINS = [
   // OpenAI（规则集已有 openai.com/chatgpt.com/sora.com，这几个是补的）
   "openai.fm", "operator.chatgpt.com", "chat.com",
   // Anthropic
   "anthropic.com", "claude.ai", "claudeusercontent.com",
-  // Google
+  // Google：Gemini / Antigravity / NotebookLM / AI Studio / DeepMind 全域
   "gemini.google.com", "aistudio.google.com", "generativelanguage.googleapis.com",
   "notebooklm.google.com", "notebooklm.google", "labs.google", "deepmind.com",
+  "ai.google.dev", "alkalicore-pa.clients6.google.com",
+  "alkalimakersuite-pa.clients6.google.com",
+  "webchannel-alkalimakersuite-pa.clients6.google.com",
+  "geminiweb-pa.clients.google.com", "geminiweb-pa.clients6.google.com",
+  "appsgenaiserver-pa.clients.google.com", "appsgenaiserver-pa.clients6.google.com",
+  "appsgenaiserver-pa.googleapis.com", "cloudaicompanion.googleapis.com",
+  "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+  "notebooklm-pa.googleapis.com", "notebooklm.googleapis.com",
+  "antigravity-pa.googleapis.com", "antigravity.googleapis.com",
+  "antigravity-unleash.goog", "antigravity.google", "notebook.google",
+  "deepmind.google", "opal.google", "flow.google", "generativeai.google",
+  "ai.studio", "jules.google", "gemini.google", "notebook.google.com",
+  "labs.google.com", "gemini.gstatic.com", "bard.google.com",
+  "jules.google.com", "makersuite.google.com", "stitch.withgoogle.com",
+  "robinfrontend-pa.googleapis.com", "flow.google.com",
+  "aisandbox-pa.googleapis.com", "aicode.googleapis.com", "aida.googleapis.com",
+  "proactivebackend-pa.googleapis.com", "opal.google.com", "geller-pa.googleapis.com",
+  "labstailwind.pa.googleapis.com",
   // xAI
   "x.ai", "grok.com",
   // Meta
@@ -160,9 +186,12 @@ function buildRules() {
     path: ./ruleset/${pn}.list`);
     rules.push(`  - RULE-SET,${pn},${group}`);
   });
-  // 内联的 AI 域名放在 RULE-SET 前面，别被上游规则集里更宽的条目抢先命中
+  // 内联的 AI 规则放在 RULE-SET 前面，别被上游规则集里更宽的条目抢先命中。
+  // GeoSite 分类排最前：自动跟随 GeoSite.dat 更新（OpenClash 每周三 cron 刷新），
+  // 新域名不用改代码；显式域名随后兜底不支持 GEOSITE 的客户端。
+  const geo = AI_GEOSITE.map((c) => `  - GEOSITE,${c},🤖 AI服务`);
   const ai = AI_DOMAINS.map((d) => `  - DOMAIN-SUFFIX,${d},🤖 AI服务`);
-  return { prov: prov.join("\n"), rules: [...ai, ...rules].join("\n") };
+  return { prov: prov.join("\n"), rules: [...geo, ...ai, ...rules].join("\n") };
 }
 
 /** 公共头部：端口、DNS、sniffer 那一堆。 */
@@ -390,11 +419,15 @@ export function buildConfig(warp, opera, proton, wind) {
     proxies:
 ${q(names)}`).join("\n\n");
 
-  // 组合太多没法平铺选，按地区收成 url-test
+  // 组合太多没法平铺选，按地区收成 smart
   const locNames = Object.keys(byLoc).map((l) => `${l}线路`);
   // 接入点本来就在 proxies 里（做 dialer-proxy 的目标），
   // 顺手暴露成一个直连组：套娃慢或落地挂了就切这个，一份订阅够用
-  // Proton 按国家分组：外层能选国家，组内 url-test 自动挑最快的那台
+  // Proton 按国家分组：外层能选国家，组内挑最快的那台
+  //
+  // Proton 全家族一律 select，绝不出现 url-test/smart：
+  // 免费版对并发探测有服务端限流，一次批量测速就可能把凭据打到冷却，
+  // 所以只允许「被选用的那一台」由用户手动测速，其余节点不参与任何自动探测。
   const protonCCNames = Object.keys(protonByCC).map((c) => `Proton-${c}`);
   const protonCCDefs = Object.entries(protonByCC).map(([cc, names]) =>
     `  - name: Proton-${cc}
@@ -402,11 +435,21 @@ ${q(names)}`).join("\n\n");
     proxies:
 ${q(names)}`).join("\n\n");
 
+  // picks：给 select 类分组用的候选（select 不做任何自动探测，塞多少都安全）
   const picks = [...locNames, "WARP直连"];
   if (protonNames.length) picks.push("Proton线路", ...protonCCNames);
   if (windNames.length) picks.push("Windscribe线路", ...windLocNames);
+  // probePicks：只给会自动探测的组（smart / fallback / url-test）用。
+  // 只保留三个大区落地组 + WARP直连 —— 这四类才是需要按目标动态选线的。
+  // Proton / Windscribe 全家族排除在外：它们的服务端都对并发探测限流，
+  // 塞进自动组等于每轮健康检查批量打一遍；排除后它们只在用户手选那台时被测，
+  // 即「只允许被选用的节点测速」。
+  const probePicks = [...locNames, "WARP直连"];
+  // 出游组直接在源头写成 smart，不等 OpenClash 的 auto_smart_switch 转换：
+  // 转换条件只认 url-test/load-balance/fallback，写成 smart 就不再被它改类型，
+  // 也就不用依赖「路由器那边恰好开着 smart」。
   const locDefs = Object.entries(byLoc).map(([loc, tags]) => `  - name: ${loc}线路
-    type: url-test
+    type: smart
     url: https://www.gstatic.com/generate_204
     interval: ${loc === "美洲" ? 300 : 3600}
     tolerance: 80
@@ -447,13 +490,13 @@ ${p(picks)}
       - 🔄 故障转移
 
   - name: ♻️ 自动选择
-    type: url-test
+    type: smart
     url: https://www.gstatic.com/generate_204
     interval: 3600
     tolerance: 50
     lazy: true
     proxies:
-${p(picks)}
+${p(probePicks)}
 
   - name: 🔄 故障转移
     type: fallback
@@ -461,7 +504,7 @@ ${p(picks)}
     interval: 180
     lazy: true
     proxies:
-${p(picks)}
+${p(probePicks)}
 
 ${locDefs}
 

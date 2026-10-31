@@ -14,7 +14,7 @@ import sys
 import urllib.parse
 from common import (
     V4, V6, PORTS, OFFICIAL_SNI, SNI_NODE,
-    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS
+    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS, ai_rule_lines
 )
 
 def node_name(ip, port):

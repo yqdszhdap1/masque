@@ -465,6 +465,7 @@ function buildEntries(warp) {
   ));
   return { entries, proxies, v4Entries };
 }
+var AI_GEOSITE = ["google-gemini", "openai", "anthropic"];
 var AI_DOMAINS = [
   // OpenAI（规则集已有 openai.com/chatgpt.com/sora.com，这几个是补的）
   "openai.fm",
@@ -474,7 +475,7 @@ var AI_DOMAINS = [
   "anthropic.com",
   "claude.ai",
   "claudeusercontent.com",
-  // Google
+  // Google：Gemini / Antigravity / NotebookLM / AI Studio / DeepMind 全域
   "gemini.google.com",
   "aistudio.google.com",
   "generativelanguage.googleapis.com",
@@ -482,6 +483,48 @@ var AI_DOMAINS = [
   "notebooklm.google",
   "labs.google",
   "deepmind.com",
+  "ai.google.dev",
+  "alkalicore-pa.clients6.google.com",
+  "alkalimakersuite-pa.clients6.google.com",
+  "webchannel-alkalimakersuite-pa.clients6.google.com",
+  "geminiweb-pa.clients.google.com",
+  "geminiweb-pa.clients6.google.com",
+  "appsgenaiserver-pa.clients.google.com",
+  "appsgenaiserver-pa.clients6.google.com",
+  "appsgenaiserver-pa.googleapis.com",
+  "cloudaicompanion.googleapis.com",
+  "cloudcode-pa.googleapis.com",
+  "daily-cloudcode-pa.googleapis.com",
+  "notebooklm-pa.googleapis.com",
+  "notebooklm.googleapis.com",
+  "antigravity-pa.googleapis.com",
+  "antigravity.googleapis.com",
+  "antigravity-unleash.goog",
+  "antigravity.google",
+  "notebook.google",
+  "deepmind.google",
+  "opal.google",
+  "flow.google",
+  "generativeai.google",
+  "ai.studio",
+  "jules.google",
+  "gemini.google",
+  "notebook.google.com",
+  "labs.google.com",
+  "gemini.gstatic.com",
+  "bard.google.com",
+  "jules.google.com",
+  "makersuite.google.com",
+  "stitch.withgoogle.com",
+  "robinfrontend-pa.googleapis.com",
+  "flow.google.com",
+  "aisandbox-pa.googleapis.com",
+  "aicode.googleapis.com",
+  "aida.googleapis.com",
+  "proactivebackend-pa.googleapis.com",
+  "opal.google.com",
+  "geller-pa.googleapis.com",
+  "labstailwind.pa.googleapis.com",
   // xAI
   "x.ai",
   "grok.com",
@@ -595,8 +638,9 @@ function buildRules() {
     path: ./ruleset/${pn}.list`);
     rules.push(`  - RULE-SET,${pn},${group}`);
   });
+  const geo = AI_GEOSITE.map((c) => `  - GEOSITE,${c},\u{1F916} AI\u670D\u52A1`);
   const ai = AI_DOMAINS.map((d) => `  - DOMAIN-SUFFIX,${d},\u{1F916} AI\u670D\u52A1`);
-  return { prov: prov.join("\n"), rules: [...ai, ...rules].join("\n") };
+  return { prov: prov.join("\n"), rules: [...geo, ...ai, ...rules].join("\n") };
 }
 function head(ipv6) {
   return `mixed-port: 7890
@@ -810,8 +854,9 @@ ${q(names)}`).join("\n\n");
   const picks = [...locNames, "WARP\u76F4\u8FDE"];
   if (protonNames.length) picks.push("Proton\u7EBF\u8DEF", ...protonCCNames);
   if (windNames.length) picks.push("Windscribe\u7EBF\u8DEF", ...windLocNames);
+  const probePicks = [...locNames, "WARP\u76F4\u8FDE"];
   const locDefs = Object.entries(byLoc).map(([loc, tags]) => `  - name: ${loc}\u7EBF\u8DEF
-    type: url-test
+    type: smart
     url: https://www.gstatic.com/generate_204
     interval: ${loc === "\u7F8E\u6D32" ? 300 : 3600}
     tolerance: 80
@@ -850,13 +895,13 @@ ${p(picks)}
       - \u{1F504} \u6545\u969C\u8F6C\u79FB
 
   - name: \u267B\uFE0F \u81EA\u52A8\u9009\u62E9
-    type: url-test
+    type: smart
     url: https://www.gstatic.com/generate_204
     interval: 3600
     tolerance: 50
     lazy: true
     proxies:
-${p(picks)}
+${p(probePicks)}
 
   - name: \u{1F504} \u6545\u969C\u8F6C\u79FB
     type: fallback
@@ -864,7 +909,7 @@ ${p(picks)}
     interval: 180
     lazy: true
     proxies:
-${p(picks)}
+${p(probePicks)}
 
 ${locDefs}
 

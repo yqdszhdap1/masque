@@ -215,8 +215,8 @@ export function renderUI(state, host, sp, token, cred, pushToken, protonCred, wi
     ? new Date(protonCred.expiresAt * 1000) : null;
   const windInfo = s.wind || null;
   const gb = (n) => (n / 1073741824).toFixed(2) + " GB";
-  const windRemaining = windUsage ? windUsage.used : 0;
-  const windUsed = windUsage && windUsage.max ? Math.max(0, windUsage.max - windRemaining) : 0;
+  const windUsed = windUsage ? windUsage.used : 0;
+  const windRemaining = windUsage && windUsage.max ? Math.max(0, windUsage.max - windUsed) : 0;
   const windPct = windUsage && windUsage.max
     ? Math.round((windUsed / windUsage.max) * 100) : 0;
   const windUsageTxt = windUsage && windUsage.max

@@ -1301,8 +1301,8 @@ function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage
   const pExp = protonCred && protonCred.expiresAt ? new Date(protonCred.expiresAt * 1e3) : null;
   const windInfo = s.wind || null;
   const gb = (n) => (n / 1073741824).toFixed(2) + " GB";
-  const windRemaining = windUsage ? windUsage.used : 0;
-  const windUsed = windUsage && windUsage.max ? Math.max(0, windUsage.max - windRemaining) : 0;
+  const windUsed = windUsage ? windUsage.used : 0;
+  const windRemaining = windUsage && windUsage.max ? Math.max(0, windUsage.max - windUsed) : 0;
   const windPct = windUsage && windUsage.max ? Math.round(windUsed / windUsage.max * 100) : 0;
   const windUsageTxt = windUsage && windUsage.max ? `${gb(windUsed)} / ${gb(windUsage.max)}\uFF08\u5DF2\u7528 ${windPct}%\uFF0C\u4F59 ${gb(windRemaining)}\uFF09` : null;
   const pLeft = pExp ? Math.floor((pExp.getTime() - Date.now()) / 864e5) : null;
@@ -1856,10 +1856,10 @@ var index_default = {
       try {
         const s = await fetchSession(wa);
         const maxMb = Math.round(s.max / 1048576);
-        const remainingMb = Math.round(s.used / 1048576);
-        const usedMb = Math.max(0, maxMb - remainingMb);
-        const remainingPct = maxMb > 0 ? Math.round(remainingMb / maxMb * 100) : 0;
+        const usedMb = Math.round(s.used / 1048576);
+        const remainingMb = Math.max(0, maxMb - usedMb);
         const usedPct = maxMb > 0 ? Math.round(usedMb / maxMb * 100) : 0;
+        const remainingPct = maxMb > 0 ? Math.round(remainingMb / maxMb * 100) : 0;
         return json({
           ok: true,
           max_mb: maxMb,

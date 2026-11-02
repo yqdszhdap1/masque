@@ -369,10 +369,23 @@ t("新 Token 可访问订阅",
   t("同一令牌不带后缀走 Proton", !!kv.get("proton:cred"));
   t("两种凭据互不覆盖", !!kv.get("wind:account") && !!kv.get("proton:cred"));
 
+  // 查询 Windscribe 配额接口
+  const tkSub = kv.get("sub:token");
+  const getQ = (tok) => worker.fetch(new Request(`https://x.dev/api/wind/quota?token=${tok}`), env);
+  t("无 token 查配额 404", (await worker.fetch(new Request("https://x.dev/api/wind/quota"), env)).status === 404);
+  t("错 token 查配额 404", (await getQ("bad-token")).status === 404);
+  const qRes = await getQ(tkSub);
+  t("对 token 查配额 200", qRes.status === 200);
+  const qData = await qRes.json();
+  t("返回配额字段完整", qData.ok === true && qData.max_mb > 0 && typeof qData.remaining_pct === "number");
+
   // 清除
   await worker.fetch(post("/api/wind/clear", {}, a6), env);
   t("能清除 Windscribe 账号", !kv.get("wind:account"));
   t("清除 wind 不动 Proton", !!kv.get("proton:cred"));
+
+  const noAccRes = await getQ(tkSub);
+  t("清除后查配额返回无账号", noAccRes.status === 200 && (await noAccRes.json()).ok === false);
 }
 
 console.log(`\n通过 ${pass} 失败 ${fail}`);

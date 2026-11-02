@@ -227,6 +227,38 @@ export default {
     const settings = await getSettings(env);
     const subPath = "/" + settings.subPath;
 
+    // ---- 查询 Windscribe 剩余额度（供路由器/OpenClash 监控，不触发 Opera 刷新） ----
+    if (path === "/api/wind/quota") {
+      const t = url.searchParams.get("token") || "";
+      const subToken = await env.KV.get(K_SUB_TOKEN);
+      const isStaticValid = subToken && safeEqual(t, subToken);
+      const isSessionValid = cred && (await verifyToken(cred, t));
+      if (!isStaticValid && !isSessionValid && !authed) return notFound();
+
+      const wa = await env.KV.get(K_WIND, "json");
+      if (!wa || !wa.sessionAuthHash) {
+        return json({ ok: false, error: "no_windscribe_account" });
+      }
+
+      try {
+        const s = await fetchSession(wa);
+        const maxMb = Math.round(s.max / 1048576);
+        const usedMb = Math.round(s.used / 1048576);
+        const remainingMb = Math.max(0, maxMb - usedMb);
+        const remainingPct = maxMb > 0 ? Math.round((remainingMb / maxMb) * 100) : 0;
+        return json({
+          ok: true,
+          max_mb: maxMb,
+          used_mb: usedMb,
+          remaining_mb: remainingMb,
+          remaining_pct: remainingPct,
+          status: s.status,
+        });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 502);
+      }
+    }
+
     // ---- 订阅。客户端带不了 cookie，用 ?token= ----
     if (path === subPath) {
       const t = url.searchParams.get("token") || "";

@@ -28,6 +28,7 @@ const K_PROTON = "proton:cred";   // Proton 凭据（由流水线推送）
 const K_PUSH = "proton:token";    // 流水线的写入令牌
 const K_WIND = "wind:account";    // Windscribe 账号，长期复用（连着开户会被降额）
 const K_LOCK = "rebuild:lock";    // 重建锁，防并发重复注册
+const K_SUB_TOKEN = "sub:token"; // 独立长期订阅 Token
 const COOKIE = "om_session";
 const DEFAULT_SUB = "sub";
 
@@ -206,6 +207,9 @@ export default {
           return json({ ok: false, error: "密码已被设置，请刷新页面" }, 409);
         }
         await env.KV.put(K_CRED, JSON.stringify(c));
+        const subToken = crypto.randomUUID().replace(/-/g, "") +
+                         crypto.randomUUID().replace(/-/g, "");
+        await env.KV.put(K_SUB_TOKEN, subToken);
         await env.KV.delete(K_CLAIM);
         const token = await signToken(c);
         return new Response(JSON.stringify({ ok: true }), {
@@ -226,7 +230,10 @@ export default {
     // ---- 订阅。客户端带不了 cookie，用 ?token= ----
     if (path === subPath) {
       const t = url.searchParams.get("token") || "";
-      if (!(await verifyToken(cred, t)) && !authed) return notFound();
+      const subToken = await env.KV.get(K_SUB_TOKEN);
+      const isStaticValid = subToken && safeEqual(t, subToken);
+      const isSessionValid = cred && (await verifyToken(cred, t));
+      if (!isStaticValid && !isSessionValid && !authed) return notFound();
 
       const yaml = await ensureConfig(env);
       if (!yaml) {
@@ -344,8 +351,14 @@ export default {
       if (wa && wa.sessionAuthHash) {
         try { windUsage = await fetchSession(wa); } catch { windUsage = null; }
       }
+      let subToken = await env.KV.get(K_SUB_TOKEN);
+      if (!subToken) {
+        subToken = crypto.randomUUID().replace(/-/g, "") +
+                   crypto.randomUUID().replace(/-/g, "");
+        await env.KV.put(K_SUB_TOKEN, subToken);
+      }
       return html(renderUI(state, url.host, subPath, token, cred,
-                           pushToken, protonCred, windUsage));
+                           pushToken, protonCred, windUsage, subToken));
     }
 
     // ---- 以下都要登录。未登录一律 404，不用 401 ----
@@ -354,6 +367,14 @@ export default {
 
     if (path === "/api/state") {
       return json((await env.KV.get(K_STATE, "json")) || {});
+    }
+
+    // 重新生成长期订阅 Token
+    if (path === "/api/sub-token/refresh" && req.method === "POST") {
+      const t = crypto.randomUUID().replace(/-/g, "") +
+                crypto.randomUUID().replace(/-/g, "");
+      await env.KV.put(K_SUB_TOKEN, t);
+      return json({ ok: true, token: t, msg: "订阅 Token 已重置，旧链接已失效" });
     }
 
     // 重新生成流水线的写入令牌
@@ -399,6 +420,9 @@ export default {
 
       const c = await makeCred(pw);
       await env.KV.put(K_CRED, JSON.stringify(c));
+      const newSubToken = crypto.randomUUID().replace(/-/g, "") +
+                          crypto.randomUUID().replace(/-/g, "");
+      await env.KV.put(K_SUB_TOKEN, newSubToken);
       const token = await signToken(c);
       return new Response(
         JSON.stringify({ ok: true, msg: "密码已改，旧的订阅链接全部失效" }), {

@@ -165,6 +165,17 @@ t("旧密码登不上",
 t("新密码能登上",
   (await worker.fetch(post("/login", { password: "brandnew123" }), env)).status === 200);
 
+// ---- 长期订阅 Token 刷新 ----
+const auth2 = { cookie: (chg.headers.get("set-cookie") || "").split(";")[0] };
+t("未登录不能重置订阅 Token",
+  (await worker.fetch(post("/api/sub-token/refresh", {}), env)).status === 404);
+const refRes = await worker.fetch(post("/api/sub-token/refresh", {}, auth2), env);
+t("重置订阅 Token 成功", refRes.status === 200);
+const refData = await refRes.json();
+t("重置后返回新 Token", !!refData.token);
+t("新 Token 可访问订阅",
+  (await worker.fetch(req(`/my-secret?token=${refData.token}`), env)).status === 200);
+
 // ---- 按需重建：没过期用缓存，过期才重建 ----
 {
   reset();

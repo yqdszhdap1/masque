@@ -1286,7 +1286,7 @@ async function go(e){
 <\/script>
 </body></html>`;
 }
-function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage) {
+function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage, subToken) {
   const s = state || {};
   const warp = s.warp || {};
   const stat = s.stats || {};
@@ -1296,7 +1296,7 @@ function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage
   const left = exp ? Math.floor((exp.getTime() - Date.now()) / 6e4) : null;
   const leftTxt = left === null ? "\u2014" : left <= 0 ? "\u5DF2\u8FC7\u671F\uFF0C\u4E0B\u6B21\u8BBF\u95EE\u8BA2\u9605\u65F6\u81EA\u52A8\u91CD\u5EFA" : `${Math.floor(left / 60)} \u5C0F\u65F6 ${left % 60} \u5206\u540E\u8FC7\u671F`;
   const fmt = (d) => d ? d.toISOString().replace("T", " ").slice(0, 19) + " UTC" : "\u2014";
-  const sub = `https://${host}${sp}?token=${token}`;
+  const sub = `https://${host}${sp}?token=${subToken || token}`;
   const pushUrl = pushToken ? `https://${host}/push/${pushToken}` : "";
   const pExp = protonCred && protonCred.expiresAt ? new Date(protonCred.expiresAt * 1e3) : null;
   const windInfo = s.wind || null;
@@ -1391,8 +1391,10 @@ function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage
         <input id="u" value="${sub}" readonly>
         <button onclick="cp('u')">\u590D\u5236</button>
         <button class="gh" onclick="location.href=document.getElementById('u').value">\u4E0B\u8F7D</button>
+        <button class="gh" style="color:var(--yellow);border-color:var(--yellow)" onclick="go('/api/sub-token/refresh')">\u91CD\u7F6E Token</button>
       </div>
       <div class="note">
+        <b>\u8BA2\u9605\u94FE\u63A5</b> \u2014 \u91C7\u7528\u72EC\u7ACB\u957F\u671F Token\uFF0C\u586B\u5165\u5BA2\u6237\u7AEF\u540E\u6C38\u4E45\u6709\u6548\u3002\u82E5\u6000\u7591\u6CC4\u9732\u53EF\u70B9\u300C\u91CD\u7F6E Token\u300D\u6216\u4FEE\u6539\u7BA1\u7406\u5458\u5BC6\u7801\uFF0C\u65E7\u94FE\u63A5\u7ACB\u5373\u5931\u6548\u3002<br>
         \u4E00\u4EFD\u805A\u5408\uFF0C\u5BFC\u8FDB\u53BB\u6709\u4E24\u7C7B\u7EBF\u8DEF\u53EF\u5207\uFF1A<br>
         <b>\u4E9A\u6D32/\u6B27\u6D32/\u7F8E\u6D32\u7EBF\u8DEF</b> \u2014 \u8D70 MASQUE \u518D\u843D Opera\uFF0C\u80FD\u6362\u51FA\u53E3\u56FD\u5BB6\uFF0C\u4F46\u591A\u4E00\u8DF3\u4F1A\u6162\u4E9B\u3002<br>
         <b>WARP\u76F4\u8FDE</b> \u2014 \u53EA\u8D70 MASQUE\uFF0C\u51FA\u53E3\u662F Cloudflare \u81EA\u5DF1\u7684 IP\uFF0C\u5FEB\u4F46\u9009\u4E0D\u4E86\u56FD\u5BB6\u3002<br>
@@ -1699,6 +1701,7 @@ var K_PROTON = "proton:cred";
 var K_PUSH = "proton:token";
 var K_WIND = "wind:account";
 var K_LOCK = "rebuild:lock";
+var K_SUB_TOKEN = "sub:token";
 var COOKIE = "om_session";
 var DEFAULT_SUB = "sub";
 var TTL_MS = 4 * 3600 * 1e3;
@@ -1822,6 +1825,8 @@ var index_default = {
           return json({ ok: false, error: "\u5BC6\u7801\u5DF2\u88AB\u8BBE\u7F6E\uFF0C\u8BF7\u5237\u65B0\u9875\u9762" }, 409);
         }
         await env.KV.put(K_CRED, JSON.stringify(c));
+        const subToken = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+        await env.KV.put(K_SUB_TOKEN, subToken);
         await env.KV.delete(K_CLAIM);
         const token = await signToken(c);
         return new Response(JSON.stringify({ ok: true }), {
@@ -1838,7 +1843,10 @@ var index_default = {
     const subPath = "/" + settings.subPath;
     if (path === subPath) {
       const t = url.searchParams.get("token") || "";
-      if (!await verifyToken(cred, t) && !authed) return notFound();
+      const subToken = await env.KV.get(K_SUB_TOKEN);
+      const isStaticValid = subToken && safeEqual(t, subToken);
+      const isSessionValid = cred && await verifyToken(cred, t);
+      if (!isStaticValid && !isSessionValid && !authed) return notFound();
       const yaml = await ensureConfig(env);
       if (!yaml) {
         return new Response(
@@ -1945,6 +1953,11 @@ var index_default = {
           windUsage = null;
         }
       }
+      let subToken = await env.KV.get(K_SUB_TOKEN);
+      if (!subToken) {
+        subToken = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+        await env.KV.put(K_SUB_TOKEN, subToken);
+      }
       return html(renderUI(
         state,
         url.host,
@@ -1953,12 +1966,18 @@ var index_default = {
         cred,
         pushToken,
         protonCred,
-        windUsage
+        windUsage,
+        subToken
       ));
     }
     if (!authed) return notFound();
     if (path === "/api/state") {
       return json(await env.KV.get(K_STATE, "json") || {});
+    }
+    if (path === "/api/sub-token/refresh" && req.method === "POST") {
+      const t = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      await env.KV.put(K_SUB_TOKEN, t);
+      return json({ ok: true, token: t, msg: "\u8BA2\u9605 Token \u5DF2\u91CD\u7F6E\uFF0C\u65E7\u94FE\u63A5\u5DF2\u5931\u6548" });
     }
     if (path === "/api/proton/token" && req.method === "POST") {
       const t = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
@@ -1995,6 +2014,8 @@ var index_default = {
       if (pw !== body.confirm) return json({ ok: false, error: "\u4E24\u6B21\u8F93\u5165\u4E0D\u4E00\u81F4" }, 400);
       const c = await makeCred(pw);
       await env.KV.put(K_CRED, JSON.stringify(c));
+      const newSubToken = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      await env.KV.put(K_SUB_TOKEN, newSubToken);
       const token = await signToken(c);
       return new Response(
         JSON.stringify({ ok: true, msg: "\u5BC6\u7801\u5DF2\u6539\uFF0C\u65E7\u7684\u8BA2\u9605\u94FE\u63A5\u5168\u90E8\u5931\u6548" }),

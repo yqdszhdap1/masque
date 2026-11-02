@@ -197,7 +197,7 @@ async function go(e){
 </body></html>`;
 }
 
-export function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage) {
+export function renderUI(state, host, sp, token, cred, pushToken, protonCred, windUsage, subToken) {
   const s = state || {};
   const warp = s.warp || {};
   const stat = s.stats || {};
@@ -209,7 +209,7 @@ export function renderUI(state, host, sp, token, cred, pushToken, protonCred, wi
     : left <= 0 ? "已过期，下次访问订阅时自动重建"
     : `${Math.floor(left / 60)} 小时 ${left % 60} 分后过期`;
   const fmt = (d) => d ? d.toISOString().replace("T", " ").slice(0, 19) + " UTC" : "—";
-  const sub = `https://${host}${sp}?token=${token}`;
+  const sub = `https://${host}${sp}?token=${subToken || token}`;
   const pushUrl = pushToken ? `https://${host}/push/${pushToken}` : "";
   const pExp = protonCred && protonCred.expiresAt
     ? new Date(protonCred.expiresAt * 1000) : null;
@@ -310,8 +310,10 @@ export function renderUI(state, host, sp, token, cred, pushToken, protonCred, wi
         <input id="u" value="${sub}" readonly>
         <button onclick="cp('u')">复制</button>
         <button class="gh" onclick="location.href=document.getElementById('u').value">下载</button>
+        <button class="gh" style="color:var(--yellow);border-color:var(--yellow)" onclick="go('/api/sub-token/refresh')">重置 Token</button>
       </div>
       <div class="note">
+        <b>订阅链接</b> — 采用独立长期 Token，填入客户端后永久有效。若怀疑泄露可点「重置 Token」或修改管理员密码，旧链接立即失效。<br>
         一份聚合，导进去有两类线路可切：<br>
         <b>亚洲/欧洲/美洲线路</b> — 走 MASQUE 再落 Opera，能换出口国家，但多一跳会慢些。<br>
         <b>WARP直连</b> — 只走 MASQUE，出口是 Cloudflare 自己的 IP，快但选不了国家。<br>

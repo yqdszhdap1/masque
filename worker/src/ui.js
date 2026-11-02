@@ -214,11 +214,13 @@ export function renderUI(state, host, sp, token, cred, pushToken, protonCred, wi
   const pExp = protonCred && protonCred.expiresAt
     ? new Date(protonCred.expiresAt * 1000) : null;
   const windInfo = s.wind || null;
-  const windPct = windUsage && windUsage.max
-    ? Math.round((windUsage.used / windUsage.max) * 100) : 0;
   const gb = (n) => (n / 1073741824).toFixed(2) + " GB";
+  const windRemaining = windUsage ? windUsage.used : 0;
+  const windUsed = windUsage && windUsage.max ? Math.max(0, windUsage.max - windRemaining) : 0;
+  const windPct = windUsage && windUsage.max
+    ? Math.round((windUsed / windUsage.max) * 100) : 0;
   const windUsageTxt = windUsage && windUsage.max
-    ? `${gb(windUsage.used)} / ${gb(windUsage.max)}（${windPct}%）` : null;
+    ? `${gb(windUsed)} / ${gb(windUsage.max)}（已用 ${windPct}%，余 ${gb(windRemaining)}）` : null;
   const pLeft = pExp ? Math.floor((pExp.getTime() - Date.now()) / 86400000) : null;
 
   const row = (k, v, cls = "") =>

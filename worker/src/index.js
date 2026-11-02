@@ -243,13 +243,16 @@ export default {
       try {
         const s = await fetchSession(wa);
         const maxMb = Math.round(s.max / 1048576);
-        const usedMb = Math.round(s.used / 1048576);
-        const remainingMb = Math.max(0, maxMb - usedMb);
+        // Windscribe Session 接口返回的 traffic_used 实际上是当前账户剩余可用流量
+        const remainingMb = Math.round(s.used / 1048576);
+        const usedMb = Math.max(0, maxMb - remainingMb);
         const remainingPct = maxMb > 0 ? Math.round((remainingMb / maxMb) * 100) : 0;
+        const usedPct = maxMb > 0 ? Math.round((usedMb / maxMb) * 100) : 0;
         return json({
           ok: true,
           max_mb: maxMb,
           used_mb: usedMb,
+          used_pct: usedPct,
           remaining_mb: remainingMb,
           remaining_pct: remainingPct,
           status: s.status,

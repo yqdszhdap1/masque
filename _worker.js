@@ -1706,7 +1706,7 @@ var K_LOCK = "rebuild:lock";
 var K_SUB_TOKEN = "sub:token";
 var COOKIE = "om_session";
 var DEFAULT_SUB = "sub";
-var TTL_MS = 4 * 3600 * 1e3;
+var TTL_MS = (3 * 3600 + 20 * 60) * 1e3;
 var SKEW_MS = 10 * 60 * 1e3;
 var SEC_HEADERS = {
   "x-content-type-options": "nosniff",

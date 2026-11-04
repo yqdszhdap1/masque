@@ -32,10 +32,9 @@ const K_SUB_TOKEN = "sub:token"; // 独立长期订阅 Token
 const COOKIE = "om_session";
 const DEFAULT_SUB = "sub";
 
-// Opera 凭据有效期。opera-proxy 默认每 4 小时刷新一次登录和设备密码
-// （main.go: -refresh 4h），API 本身不返回真实 TTL，按这个值走。
+// Opera 凭据有效期。按设定调整为 3 小时 20 分钟（200 分钟）
 // 留 10 分钟余量，别卡着点过期。
-const TTL_MS = 4 * 3600 * 1000;
+const TTL_MS = (3 * 3600 + 20 * 60) * 1000;
 const SKEW_MS = 10 * 60 * 1000;
 
 const SEC_HEADERS = {

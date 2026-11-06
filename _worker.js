@@ -608,17 +608,17 @@ var AI_DOMAINS = [
   "pinecone.io",
   "weaviate.io",
   "qdrant.tech",
-  "chromadb.com",
-  // 国产（默认也走代理，很多在国内反而连不上或要境外号）
+  "chromadb.com"
+  // 国产 AI 服务域名剥离出 AI服务 组（走代理绕远/易失败），改走直连：
+  // 见 AI_DIRECT_DOMAINS。仅保留确需代理的国际域名。
+];
+var AI_DIRECT_DOMAINS = [
   "deepseek.com",
   "moonshot.cn",
-  "moonshotai.com",
   "kimi.com",
   "bigmodel.cn",
   "zhipuai.cn",
-  "z.ai",
   "minimaxi.com",
-  "minimax.io",
   "hailuoai.com",
   "siliconflow.cn",
   "dashscope.aliyuncs.com"
@@ -640,7 +640,8 @@ function buildRules() {
   });
   const geo = AI_GEOSITE.map((c) => `  - GEOSITE,${c},\u{1F916} AI\u670D\u52A1`);
   const ai = AI_DOMAINS.map((d) => `  - DOMAIN-SUFFIX,${d},\u{1F916} AI\u670D\u52A1`);
-  return { prov: prov.join("\n"), rules: [...geo, ...ai, ...rules].join("\n") };
+  const direct = AI_DIRECT_DOMAINS.map((d) => `  - DOMAIN-SUFFIX,${d},DIRECT`);
+  return { prov: prov.join("\n"), rules: [...direct, ...geo, ...ai, ...rules].join("\n") };
 }
 function head(ipv6) {
   return `mixed-port: 7890
@@ -958,6 +959,9 @@ rule-providers:
 ${prov}
 
 rules:
+  - DOMAIN-SUFFIX,apikey.fan,DIRECT
+  - DOMAIN-SUFFIX,opencode.ai,DIRECT
+  - DOMAIN-SUFFIX,bigmodel.cn,DIRECT
 ${rules}
   - GEOIP,LAN,\u{1F3AF} \u5168\u7403\u76F4\u8FDE,no-resolve
   - GEOIP,CN,\u{1F3AF} \u5168\u7403\u76F4\u8FDE

@@ -142,7 +142,6 @@ const AI_DOMAINS = [
   "cohere.com", "cohere.ai", "ai21.com", "together.ai", "together.xyz",
   "fireworks.ai", "groq.com",
   // 开源社区与推理平台
-  "huggingface.co", "hf.co", "huggingface.js.org",
   "replicate.com", "replicate.delivery", "runpod.io", "modal.com",
   "openrouter.ai", "poe.com", "quora.com",
   // 编程助手

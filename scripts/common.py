@@ -78,7 +78,7 @@ AI_DOMAINS = [
     "perplexity.ai", "pplx.ai", "perplexity.com", "mistral.ai",
     "chat.mistral.ai", "cohere.com", "cohere.ai", "ai21.com",
     "together.ai", "together.xyz", "fireworks.ai", "groq.com",
-    "huggingface.co", "hf.co", "huggingface.js.org", "replicate.com",
+    "replicate.com",
     "replicate.delivery", "runpod.io", "modal.com", "openrouter.ai",
     "poe.com", "quora.com", "cursor.com", "cursor.sh",
     "codeium.com", "windsurf.com", "tabnine.com", "sourcegraph.com",

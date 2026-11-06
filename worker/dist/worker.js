@@ -546,9 +546,6 @@ var AI_DOMAINS = [
   "fireworks.ai",
   "groq.com",
   // 开源社区与推理平台
-  "huggingface.co",
-  "hf.co",
-  "huggingface.js.org",
   "replicate.com",
   "replicate.delivery",
   "runpod.io",

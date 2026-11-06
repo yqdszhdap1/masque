@@ -140,7 +140,7 @@ t(`无悬空引用${dangling.length ? " (" + dangling.slice(0, 3) + ")" : ""}`, 
   // 各家都要能命中（deepseek.com/kimi.com 属国产直连，见 AI_DIRECT_DOMAINS）
   const must = [
     "anthropic.com", "grok.com", "perplexity.ai",
-    "midjourney.com", "huggingface.co", "cursor.com", "elevenlabs.io",
+    "midjourney.com", "cursor.com", "elevenlabs.io",
     "mistral.ai", "meta.ai", "openrouter.ai",
   ];
   const miss = must.filter((d) => !y.includes(`DOMAIN-SUFFIX,${d},🤖 AI服务`));
@@ -152,6 +152,7 @@ t(`无悬空引用${dangling.length ? " (" + dangling.slice(0, 3) + ")" : ""}`, 
   t(`国产 AI 已剥离${badCn.length ? " 残留:" + badCn.slice(0, 3) : ""}`, badCn.length === 0);
   const missDirect = cnDirect.filter((d) => !y.includes(`DOMAIN-SUFFIX,${d},DIRECT`));
   t(`国产 AI 直连规则齐${missDirect.length ? " 缺:" + missDirect.slice(0, 3) : ""}`, missDirect.length === 0);
+  t("huggingface 已从 AI服务 组移除", !y.includes("DOMAIN-SUFFIX,huggingface.co,🤖 AI服务"));
   t("前置 apikey.fan/opencode.ai/bigmodel.cn 直连",
     y.includes("rules:\n  - DOMAIN-SUFFIX,apikey.fan,DIRECT") &&
     y.includes("  - DOMAIN-SUFFIX,opencode.ai,DIRECT") &&

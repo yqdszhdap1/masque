@@ -164,6 +164,8 @@ const AI_DOMAINS = [
   "pinecone.io", "weaviate.io", "qdrant.tech", "chromadb.com",
   // 国产 AI 服务域名剥离出 AI服务 组（走代理绕远/易失败），改走直连：
   // 见 AI_DIRECT_DOMAINS。仅保留确需代理的国际域名。
+  // 国际版保留走代理
+  "z.ai", "moonshotai.com", "minimax.io",
 ];
 
 // 国产 AI 服务（境内可达），显式直连，置于 AI 规则之前。

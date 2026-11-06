@@ -14,7 +14,8 @@ import sys
 import urllib.parse
 from common import (
     V4, V6, PORTS, OFFICIAL_SNI, SNI_NODE,
-    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS, ai_rule_lines
+    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS, ai_rule_lines,
+    direct_rule_lines
 )
 
 def node_name(ip, port):
@@ -87,7 +88,7 @@ def build(cfg):
         rules.append(f"  - RULE-SET,{pn},{group}")
 
     # 内联的 AI 域名放在 RULE-SET 前面，别被上游更宽的条目抢先命中
-    rules = [f"  - DOMAIN-SUFFIX,{d},🤖 AI服务" for d in AI_DOMAINS] + rules
+    rules = direct_rule_lines() + [f"  - DOMAIN-SUFFIX,{d},🤖 AI服务" for d in AI_DOMAINS] + rules
 
     links = masque_links(cfg, priv, pub)
 

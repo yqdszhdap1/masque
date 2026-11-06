@@ -137,14 +137,25 @@ t(`无悬空引用${dangling.length ? " (" + dangling.slice(0, 3) + ")" : ""}`, 
   t("旧的 OpenAi 分组已改名", !gs.includes("🤖 OpenAi"));
   t("没有指向 OpenAi 的残留规则", !y.includes(",🤖 OpenAi"));
 
-  // 各家都要能命中
+  // 各家都要能命中（deepseek.com/kimi.com 属国产直连，见 AI_DIRECT_DOMAINS）
   const must = [
-    "anthropic.com", "grok.com", "perplexity.ai", "deepseek.com",
+    "anthropic.com", "grok.com", "perplexity.ai",
     "midjourney.com", "huggingface.co", "cursor.com", "elevenlabs.io",
-    "mistral.ai", "meta.ai", "openrouter.ai", "kimi.com",
+    "mistral.ai", "meta.ai", "openrouter.ai",
   ];
   const miss = must.filter((d) => !y.includes(`DOMAIN-SUFFIX,${d},🤖 AI服务`));
   t(`覆盖各家 AI${miss.length ? " 缺:" + miss.slice(0, 3) : ""}`, miss.length === 0);
+
+  // 国产 AI 剥离出 AI服务 组，显式直连
+  const cnDirect = ["deepseek.com", "kimi.com", "bigmodel.cn", "minimaxi.com", "moonshot.cn"];
+  const badCn = cnDirect.filter((d) => y.includes(`DOMAIN-SUFFIX,${d},🤖 AI服务`));
+  t(`国产 AI 已剥离${badCn.length ? " 残留:" + badCn.slice(0, 3) : ""}`, badCn.length === 0);
+  const missDirect = cnDirect.filter((d) => !y.includes(`DOMAIN-SUFFIX,${d},DIRECT`));
+  t(`国产 AI 直连规则齐${missDirect.length ? " 缺:" + missDirect.slice(0, 3) : ""}`, missDirect.length === 0);
+  t("前置 apikey.fan/opencode.ai/bigmodel.cn 直连",
+    y.includes("rules:\n  - DOMAIN-SUFFIX,apikey.fan,DIRECT") &&
+    y.includes("  - DOMAIN-SUFFIX,opencode.ai,DIRECT") &&
+    y.includes("  - DOMAIN-SUFFIX,bigmodel.cn,DIRECT"));
 
   // 共用域名不能进来，否则会把无关流量拽进 AI 分组
   const tooWide = ["googleapis.com", "cloudflare.com", "stripe.com", "sentry.io", "bing.com"];

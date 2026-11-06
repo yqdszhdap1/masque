@@ -92,10 +92,23 @@ AI_DOMAINS = [
     "exa.ai", "tavily.com", "jasper.ai", "copy.ai",
     "writesonic.com", "notion.so", "langchain.com", "langsmith.com",
     "wandb.ai", "weightsandbiases.com", "pinecone.io", "weaviate.io",
-    "qdrant.tech", "chromadb.com", "deepseek.com", "moonshot.cn",
-    "moonshotai.com", "kimi.com", "bigmodel.cn", "zhipuai.cn",
-    "z.ai", "minimaxi.com", "minimax.io", "hailuoai.com",
-    "siliconflow.cn", "dashscope.aliyuncs.com",
+    "qdrant.tech", "chromadb.com",
+    "z.ai", "moonshotai.com", "minimax.io",
+]
+
+# 国产 AI 服务（境内可达）剥离出 AI服务 组，显式直连。
+# 国际版保留在 AI_DOMAINS：z.ai、moonshotai.com、minimax.io。
+AI_DIRECT_DOMAINS = [
+    "deepseek.com", "moonshot.cn", "kimi.com",
+    "bigmodel.cn", "zhipuai.cn", "minimaxi.com",
+    "hailuoai.com", "siliconflow.cn", "dashscope.aliyuncs.com",
+]
+
+# 前置直连规则：插在所有规则最顶部。
+DIRECT_RULES = [
+    "DOMAIN-SUFFIX,apikey.fan,DIRECT",
+    "DOMAIN-SUFFIX,opencode.ai,DIRECT",
+    "DOMAIN-SUFFIX,bigmodel.cn,DIRECT",
 ]
 
 def pem_to_b64der(pem):
@@ -130,7 +143,12 @@ def ai_rule_lines():
     """
     geo = [f"  - GEOSITE,{c},🤖 AI服务" for c in AI_GEOSITE]
     dom = [f"  - DOMAIN-SUFFIX,{d},🤖 AI服务" for d in AI_DOMAINS]
-    return geo + dom
+    direct = [f"  - DOMAIN-SUFFIX,{d},DIRECT" for d in AI_DIRECT_DOMAINS]
+    return direct + geo + dom
+
+def direct_rule_lines():
+    """前置显式直连规则，插在规则最顶部。"""
+    return [f"  - {r}" for r in DIRECT_RULES]
 
 
 def build_prov_and_rules():
@@ -154,5 +172,5 @@ def build_prov_and_rules():
     interval: 86400""")
         rule_lines.append(f"  - RULE-SET,{pname},{group}")
 
-    all_rules = ai_rule_lines() + rule_lines
+    all_rules = direct_rule_lines() + ai_rule_lines() + rule_lines
     return "\n".join(prov_lines), "\n".join(all_rules)

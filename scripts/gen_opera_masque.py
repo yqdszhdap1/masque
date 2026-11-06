@@ -17,7 +17,8 @@ import subprocess
 import sys
 from common import (
     V4, V6, PORTS, OFFICIAL_SNI, SNI_NODE,
-    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS, ai_rule_lines
+    pem_to_b64der, masque_node, RULESETS, AI_DOMAINS, ai_rule_lines,
+    direct_rule_lines
 )
 
 # Opera VPN 只有三个大区，没有国家级选项
@@ -119,7 +120,7 @@ def build(cfg, landings):
         rules.append(f"  - RULE-SET,{pn},{group}")
 
     # 内联的 AI 规则放在 RULE-SET 前面，别被上游更宽的条目抢先命中
-    rules = ai_rule_lines() + rules
+    rules = direct_rule_lines() + ai_rule_lines() + rules
 
     yaml = f"""# Opera VPN over Cloudflare WARP (MASQUE)
 # 由 GitHub Actions 自动生成，请勿手工编辑

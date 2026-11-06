@@ -162,11 +162,15 @@ const AI_DOMAINS = [
   // 观测与工具链
   "langchain.com", "langsmith.com", "wandb.ai", "weightsandbiases.com",
   "pinecone.io", "weaviate.io", "qdrant.tech", "chromadb.com",
-  // 国产（默认也走代理，很多在国内反而连不上或要境外号）
-  "deepseek.com", "moonshot.cn", "moonshotai.com", "kimi.com",
-  "bigmodel.cn", "zhipuai.cn", "z.ai",
-  "minimaxi.com", "minimax.io", "hailuoai.com",
-  "siliconflow.cn", "dashscope.aliyuncs.com",
+  // 国产 AI 服务域名剥离出 AI服务 组（走代理绕远/易失败），改走直连：
+  // 见 AI_DIRECT_DOMAINS。仅保留确需代理的国际域名。
+];
+
+// 国产 AI 服务（境内可达），显式直连，置于 AI 规则之前。
+const AI_DIRECT_DOMAINS = [
+  "deepseek.com", "moonshot.cn", "kimi.com",
+  "bigmodel.cn", "zhipuai.cn", "minimaxi.com",
+  "hailuoai.com", "siliconflow.cn", "dashscope.aliyuncs.com",
 ];
 
 const q = (a, n = 6) => a.map((x) => " ".repeat(n) + `- "${x}"`).join("\n");
@@ -191,7 +195,8 @@ function buildRules() {
   // 新域名不用改代码；显式域名随后兜底不支持 GEOSITE 的客户端。
   const geo = AI_GEOSITE.map((c) => `  - GEOSITE,${c},🤖 AI服务`);
   const ai = AI_DOMAINS.map((d) => `  - DOMAIN-SUFFIX,${d},🤖 AI服务`);
-  return { prov: prov.join("\n"), rules: [...geo, ...ai, ...rules].join("\n") };
+  const direct = AI_DIRECT_DOMAINS.map((d) => `  - DOMAIN-SUFFIX,${d},DIRECT`);
+  return { prov: prov.join("\n"), rules: [...direct, ...geo, ...ai, ...rules].join("\n") };
 }
 
 /** 公共头部：端口、DNS、sniffer 那一堆。 */
@@ -553,6 +558,9 @@ rule-providers:
 ${prov}
 
 rules:
+  - DOMAIN-SUFFIX,apikey.fan,DIRECT
+  - DOMAIN-SUFFIX,opencode.ai,DIRECT
+  - DOMAIN-SUFFIX,bigmodel.cn,DIRECT
 ${rules}
   - GEOIP,LAN,🎯 全球直连,no-resolve
   - GEOIP,CN,🎯 全球直连

@@ -34,6 +34,10 @@ const members = [...warpGroup.matchAll(/^      - "([^"]+)"$/gm)].map((m) => m[1]
 t(`WARP直连 有 ${members.length} 个成员`, members.length === 57);
 t("成员都是接入点(不含 @)", members.every((m) => !m.includes("@")));
 t("成员都在 proxies 里定义", members.every((m) => entryNames.includes(m)));
+// 健康检查必须走 HTTPS：明文 HTTP 探测会被运营商/提供商劫持，导致整组假死
+t("WARP直连 健康检查用 HTTPS", /url: https:\/\/[^\s]+generate_204/.test(warpGroup));
+const httpProbes = [...yaml.matchAll(/^\s+url: (http:\/\/\S+)$/gm)].map((m) => m[1]);
+t(`无明文 HTTP 探测地址${httpProbes.length ? " (" + httpProbes.join(", ") + ")" : ""}`, httpProbes.length === 0);
 
 // 节点选择里要同时有地区组和直连
 const sel = yaml.split("  - name: 🚀 节点选择")[1].split("\n  - name:")[0];

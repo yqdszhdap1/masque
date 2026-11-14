@@ -516,7 +516,7 @@ ${locDefs}
 
   - name: WARP直连
     type: url-test
-    url: http://cp.cloudflare.com/generate_204
+    url: https://cp.cloudflare.com/generate_204
     interval: 300
     tolerance: 50
     lazy: true

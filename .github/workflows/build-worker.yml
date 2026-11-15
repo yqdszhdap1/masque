@@ -41,5 +41,10 @@ jobs:
             echo "产物无变化，跳过提交"
             exit 0
           fi
-          git commit -m "build: 自动更新 _worker.js (Pages 产物) [skip ci]"
+          # 这里不能加 [skip ci]：Cloudflare Pages 认这个标记，会把整次部署标记成
+          # is_skipped 而跳过。而改 src 的那次提交触发的部署跑在重打包之前（此时
+          # 仓库里的 _worker.js 还是旧的），于是新产物永远上不了线。
+          # 本 job 有 paths: worker/src/** 过滤，回写 _worker.js 不会自触发死循环；
+          # ci.yml 没加过滤，会多跑一次只读测试，无害。
+          git commit -m "build: 自动更新 _worker.js (Pages 产物)"
           git push
